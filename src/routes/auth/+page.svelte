@@ -64,16 +64,24 @@
 		isLoading = true;
 
 		try {
-			const isVerified = await authClient.phoneNumber.verify({
-				phoneNumber: phoneNumber,
-				code: otp
+			const response = await fetch('/api/verify-otp', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					phoneNumber,
+					otp
+				})
 			});
 
-			if (isVerified) {
+			const data = await response.json();
+
+			if (data.success && data.status === 'approved') {
 				verificationSuccess = true;
 				toast('Verification Successful!');
 
-				// Redirect to dashboard or next step after successful verification
+				// Redirect to dashboard
 				setTimeout(() => {
 					goto('/dashboard');
 				}, 2000);
