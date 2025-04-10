@@ -18,6 +18,7 @@ model User {
   phoneNumberVerified Boolean?
   sessions            Session[]
   accounts            Account[]
+  orders              Order[]
 
   @@unique([email, phoneNumber])
   @@map("user")
@@ -66,4 +67,32 @@ model Verification {
   updatedAt  DateTime?
 
   @@map("verification")
+}
+
+model Order {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+  status    Status
+
+  @@map("order")
+}
+
+model Product {
+  id      String @id @default(uuid())
+  name    String
+  price   Float
+  order   Order  @relation(fields: [orderId], references: [id])
+  orderId String
+
+  @@map("product")
+}
+
+enum Status {
+  PENDING
+  COMPLETED
+  CANCELLED
 }
