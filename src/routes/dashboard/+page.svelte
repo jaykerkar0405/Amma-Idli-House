@@ -78,51 +78,6 @@
 		}
 	});
 
-	// Mock data for current orders (will be replaced with actual API data)
-	const currentOrders = [
-		{
-			id: 1,
-			items: ['Idli (2 pcs)', 'Coffee'],
-			total: '₹80',
-			status: 'preparing',
-			time: '10:30 AM'
-		},
-		{
-			id: 2,
-			items: ['Tea', 'Coffee', 'Idli (4 pcs)'],
-			total: '₹150',
-			status: 'ready',
-			time: '10:45 AM'
-		}
-	];
-
-	// Mock data for past orders
-	const pastOrders = [
-		{
-			id: 101,
-			date: '2023-10-15',
-			items: ['Idli (2 pcs)', 'Tea'],
-			total: '₹70',
-			status: 'completed'
-		},
-		{
-			id: 102,
-			date: '2023-10-14',
-			items: ['Coffee', 'Idli (4 pcs)'],
-			total: '₹130',
-			status: 'completed'
-		},
-		{ id: 103, date: '2023-10-12', items: ['Tea', 'Coffee'], total: '₹60', status: 'completed' },
-		{ id: 104, date: '2023-10-10', items: ['Idli (6 pcs)'], total: '₹120', status: 'completed' },
-		{
-			id: 105,
-			date: '2023-10-08',
-			items: ['Idli (2 pcs)', 'Coffee'],
-			total: '₹80',
-			status: 'completed'
-		}
-	];
-
 	// Menu items
 	const menuItems = [
 		{
