@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto, pushState } from '$app/navigation';
 	import { page } from '$app/stores';
+	import { authClient } from '$lib/auth-client';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import {
@@ -35,6 +36,7 @@
 	let activeTab = $state($page.url.searchParams.get('tab') || 'orders');
 	let userOrders = $state<Prisma.OrderGetPayload<{ include: { products: true } }>[]>([]);
 	let isLoading = $state(false);
+	let session = authClient.useSession();
 
 	// Update URL when tab changes
 	function handleTabChange(tab: string) {
@@ -51,11 +53,11 @@
 
 	// Fetch user orders from API
 	async function fetchUserOrders() {
-		if (!$page.data.user) return;
+		if (!$session.data?.user) return;
 
 		isLoading = true;
 		try {
-			const response = await fetch(`/api/orders/user?userId=${$page.data.user.id}`);
+			const response = await fetch(`/api/orders/user?userId=${$session.data.user.id}`);
 			const data = await response.json();
 
 			if (data.success) {
