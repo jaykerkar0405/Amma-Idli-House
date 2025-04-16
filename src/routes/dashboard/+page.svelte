@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, pushState } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
@@ -40,7 +40,7 @@
 	function handleTabChange(tab: string) {
 		const url = new URL(window.location.href);
 		url.searchParams.set('tab', tab);
-		window.history.pushState({}, '', url);
+		pushState(url.toString(), {});
 		activeTab = tab;
 
 		// If switching to orders tab, fetch orders
