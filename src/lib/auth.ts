@@ -1,14 +1,14 @@
 import {
-	TWILIO_AUTH_TOKEN,
 	TWILIO_ACCOUNT_SID,
+	TWILIO_AUTH_TOKEN,
 	TWILIO_VERIFY_SERVICE_SID
 } from '$env/static/private';
+import { PUBLIC_BETTER_AUTH_URL } from '$env/static/public';
+import { betterAuth } from 'better-auth';
+import { prismaAdapter } from 'better-auth/adapters/prisma';
+import { anonymous, phoneNumber } from 'better-auth/plugins';
 import pkg from 'twilio';
 import prisma from './prisma';
-import { betterAuth } from 'better-auth';
-import { phoneNumber } from 'better-auth/plugins';
-import { PUBLIC_BETTER_AUTH_URL } from '$env/static/public';
-import { prismaAdapter } from 'better-auth/adapters/prisma';
 
 const { Twilio } = pkg;
 
@@ -35,6 +35,7 @@ export const auth = betterAuth({
 					return `${phoneNumber}@ammasidli.in`;
 				}
 			}
-		})
+		}),
+		anonymous()
 	]
 });
