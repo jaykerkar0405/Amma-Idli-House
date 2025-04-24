@@ -12,6 +12,7 @@
 	let session = authClient.useSession();
 
 	$effect(() => {
+		if ($session.isPending || $session.isRefetching) return;
 		if (!unprotectedRoutes.includes(page.url.pathname) && !$session.data) {
 			toast.error('You need to be logged in to access this page.');
 			goto('/auth');

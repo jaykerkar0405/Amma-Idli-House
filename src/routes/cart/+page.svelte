@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { authClient } from '$lib/auth-client';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
@@ -11,16 +11,11 @@
 
 	// Local state
 	let isSubmitting = $state(false);
+	let session = authClient.useSession();
 
 	// Extract methods from cart store
-	const {
-		cart,
-		removeFromCart,
-		updateQuantity,
-		clearCart,
-		getCartTotal,
-		cartToOrderInput
-	} = cartStore;
+	const { cart, removeFromCart, updateQuantity, clearCart, getCartTotal, cartToOrderInput } =
+		cartStore;
 
 	$effect(() => {
 		// Add an effect to calculate the total, which will rerun when cart changes
@@ -30,7 +25,7 @@
 
 	async function handleCheckout() {
 		// Check if user is authenticated
-		if (!$page.data.user) {
+		if (!$session.data) {
 			toast.error('Please log in to place an order');
 			goto('/auth');
 			return;
@@ -44,7 +39,7 @@
 
 		try {
 			isSubmitting = true;
-			const orderInput = cartToOrderInput($page.data.user.id);
+			const orderInput = cartToOrderInput($session.data.user.id);
 
 			const response = await fetch('/api/orders', {
 				method: 'POST',

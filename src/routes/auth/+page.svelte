@@ -81,10 +81,27 @@
 				verificationSuccess = true;
 				toast('Verification Successful!');
 
-				// Redirect to dashboard
-				setTimeout(() => {
+				const response = await authClient.signIn.anonymous();
+				if (response.data) {
+					const fetchResponse = await fetch('/api/link-phone', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({
+							phoneNumber,
+							userId: response.data.user.id
+						})
+					});
+					if (fetchResponse.status === 200) {
+						toast('Phone number linked successfully!');
+					} else {
+						error = 'Failed to link phone number. Please try again.';
+					}
 					goto('/dashboard');
-				}, 2000);
+				} else {
+					error = 'Failed to sign in. Please try again.';
+				}
 			} else {
 				error = 'Invalid OTP. Please try again.';
 			}

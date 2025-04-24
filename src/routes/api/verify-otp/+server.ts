@@ -1,10 +1,10 @@
 import {
-	TWILIO_AUTH_TOKEN,
 	TWILIO_ACCOUNT_SID,
+	TWILIO_AUTH_TOKEN,
 	TWILIO_VERIFY_SERVICE_SID
 } from '$env/static/private';
-import pkg from 'twilio';
 import { json } from '@sveltejs/kit';
+import pkg from 'twilio';
 
 const { Twilio } = pkg;
 
