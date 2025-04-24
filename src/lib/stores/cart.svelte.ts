@@ -33,15 +33,17 @@ export function createCartStore() {
 		const savedCart = localStorage.getItem('cart');
 		if (savedCart) {
 			try {
-				cart = JSON.parse(savedCart);
-
-				// Handle migration for existing carts that don't have category
-				cart = cart.map((item) => {
+				// Process the saved cart data in a temporary variable
+				const parsedCart = JSON.parse(savedCart);
+				const processedCart = parsedCart.map((item: CartItem) => {
 					if (!item.category) {
 						return { ...item, category: 'default' };
 					}
 					return item;
 				});
+				
+				// Assign to state variable once
+				cart = processedCart;
 			} catch (e) {
 				console.error('Failed to parse cart from localStorage', e);
 			}
