@@ -60,6 +60,9 @@
       if (result.error) {
         error = result.error.message ?? 'Payment failed';
       } else if (result.paymentIntent?.status === 'succeeded') {
+        // Clear cart before creating transfers
+        cartStore.clearCart();
+        
         // Create transfers to category accounts
         const transfersResult = await createTransfers({
           paymentIntentId: result.paymentIntent.id,
@@ -68,7 +71,6 @@
         });
 
         if (transfersResult.success) {
-          cartStore.clearCart();
           goto(`/checkout/success?order_id=${orderId}`);
         } else {
           error = 'Payment processed but transfers failed';
