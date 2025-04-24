@@ -1,24 +1,42 @@
 <script lang="ts">
 	import '../app.css';
-	import { Toaster } from '$lib/components/ui/sonner';
-	import { authClient } from '$lib/auth-client';
 	import { page } from '$app/state';
-	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-
-	const unprotectedRoutes = ['/', '/auth'];
+	import { goto } from '$app/navigation';
+	import { useSession } from '$lib/auth-client';
+	import { Toaster } from '$lib/components/ui/sonner';
 
 	let { children } = $props();
-	let session = authClient.useSession();
+	const session = useSession();
+	let isLoading: boolean = $state(true);
+	const unprotectedRoutes = ['/', '/auth'];
+	const isAuthenticated = () => !!$session.data?.user?.id;
+	console.log('isAuthenticated', isAuthenticated());
 
 	$effect(() => {
 		if ($session.isPending || $session.isRefetching) return;
-		if (!unprotectedRoutes.includes(page.url.pathname) && !$session.data) {
-			toast.error('You need to be logged in to access this page.');
+		if ($session.isPending) {
+			isLoading = true;
+			return;
+		}
+
+		isLoading = false;
+
+		const needsAuth = !unprotectedRoutes.includes(page.url.pathname);
+		if (!isAuthenticated() && needsAuth) {
 			goto('/auth');
 		}
 	});
 </script>
 
 <Toaster />
-{@render children()}
+
+{#if isLoading}
+	<div class="flex h-screen items-center justify-center">
+		<div
+			class="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"
+		></div>
+	</div>
+{:else}
+	{@render children()}
+{/if}

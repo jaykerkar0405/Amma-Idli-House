@@ -6,6 +6,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Separator } from '$lib/components/ui/separator';
 	import { cartStore } from '$lib/stores/cart.svelte';
+	import { createPaymentIntent } from '$lib/services/payment.service';
 	import { MinusCircle, PlusCircle, ShoppingCart, Trash2 } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 
@@ -14,8 +15,15 @@
 	let session = authClient.useSession();
 
 	// Extract methods from cart store
-	const { cart, removeFromCart, updateQuantity, clearCart, getCartTotal, cartToOrderInput } =
-		cartStore;
+	const {
+		cart,
+		removeFromCart,
+		updateQuantity,
+		clearCart,
+		getCartTotal,
+		getTotalsByCategory,
+		cartToOrderInput
+	} = cartStore;
 
 	$effect(() => {
 		// Add an effect to calculate the total, which will rerun when cart changes
@@ -31,43 +39,63 @@
 			return;
 		}
 
-		// Check if cart is empty
-		if (cart.length === 0) {
-			toast.error('Your cart is empty');
-			return;
-		}
+		// // Check if cart is empty
+		// if (cart.length === 0) {
+		// 	toast.error('Your cart is empty');
+		// 	return;
+		// }
 
-		try {
-			isSubmitting = true;
-			const orderInput = cartToOrderInput($session.data.user.id);
+		// try {
+		// 	isSubmitting = true;
+		// 	const orderInput = cartToOrderInput($page.data.user.id);
+		// 	const categoryTotals = getTotalsByCategory(); // Get totals by category
 
-			const response = await fetch('/api/orders', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify(orderInput)
-			});
+		// 	// First create the order in your database
+		// 	const orderResponse = await fetch('/api/orders', {
+		// 		method: 'POST',
+		// 		headers: {
+		// 			'Content-Type': 'application/json'
+		// 		},
+		// 		body: JSON.stringify(orderInput)
+		// 	});
 
-			const result = await response.json();
+		// 	const orderResult = await orderResponse.json();
 
-			if (!response.ok) {
-				throw new Error(result.error || 'Failed to place order');
-			}
+		// 	if (!orderResponse.ok) {
+		// 		throw new Error(orderResult.error || 'Failed to place order');
+		// 	}
 
-			// Clear cart after successful order
-			clearCart();
+		// 	// Then create a payment intent with Stripe
+		// 	const paymentResponse = await fetch('/api/payment/create-intent', {
+		// 		method: 'POST',
+		// 		headers: {
+		// 			'Content-Type': 'application/json'
+		// 		},
+		// 		body: JSON.stringify({
+		// 			orderId: orderResult.id,
+		// 			amount: getCartTotal(),
+		// 			categoryTotals: categoryTotals
+		// 		})
+		// 	});
 
-			toast.success('Order placed successfully!');
-			goto('/dashboard');
-		} catch (error) {
-			console.error('Error placing order:', error);
-			toast.error(
-				error instanceof Error ? error.message : 'Failed to place order. Please try again.'
-			);
-		} finally {
-			isSubmitting = false;
-		}
+		// 	const paymentResult = await paymentResponse.json();
+
+		// 	if (!paymentResponse.ok) {
+		// 		throw new Error(paymentResult.error || 'Failed to process payment');
+		// 	}
+
+		// 	// Navigate to the payment page with all needed parameters
+		// 	goto(
+		// 		`/checkout/payment?client_secret=${paymentResult.clientSecret}&order_id=${orderResult.id}&category_totals=${encodeURIComponent(JSON.stringify(categoryTotals))}`
+		// 	);
+		// } catch (error) {
+		// 	console.error('Error placing order:', error);
+		// 	toast.error(
+		// 		error instanceof Error ? error.message : 'Failed to place order. Please try again.'
+		// 	);
+		// } finally {
+		// 	isSubmitting = false;
+		// }
 	}
 </script>
 

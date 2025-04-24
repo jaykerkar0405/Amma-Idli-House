@@ -87,6 +87,7 @@ model Product {
   id      String @id @default(uuid())
   name    String
   price   Float
+  category String
   order   Order  @relation(fields: [orderId], references: [id])
   orderId String
 
