@@ -8,11 +8,9 @@
   import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '$lib/components/ui/card';
   import { PUBLIC_STRIPE_KEY } from '$env/static/public';
   import { cartStore } from '$lib/stores/cart.svelte';
-  import { createTransfers } from '$lib/services/payment.service';
 
   const clientSecret = $page.url.searchParams.get('client_secret');
   const orderId = $page.url.searchParams.get('order_id');
-  const categoryTotals = $page.url.searchParams.get('category_totals');
   
   let stripe: Stripe | null;
   let elements: StripeElements | null;
@@ -60,22 +58,8 @@
       if (result.error) {
         error = result.error.message ?? 'Payment failed';
       } else if (result.paymentIntent?.status === 'succeeded') {
-        // Clear cart before creating transfers
         cartStore.clearCart();
-        
-        // Create transfers to category accounts
-        const transfersResult = await createTransfers({
-          paymentIntentId: result.paymentIntent.id,
-          orderId,
-          categoryTotals: JSON.parse(decodeURIComponent(categoryTotals || '{}'))
-        });
-
-        if (transfersResult.success) {
-          goto(`/checkout/success?order_id=${orderId}`);
-        } else {
-          error = 'Payment processed but transfers failed';
-          goto(`/checkout/success?order_id=${orderId}&transfer_error=true`);
-        }
+        goto(`/checkout/success?order_id=${orderId}`);
       }
     } catch (e) {
       console.error('Payment error:', e);
