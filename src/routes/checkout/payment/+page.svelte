@@ -8,6 +8,7 @@
   import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '$lib/components/ui/card';
   import { PUBLIC_STRIPE_KEY } from '$env/static/public';
   import { cartStore } from '$lib/stores/cart.svelte';
+  import { createTransfers } from '$lib/services/payment.service';
 
   const clientSecret = $page.url.searchParams.get('client_secret');
   const orderId = $page.url.searchParams.get('order_id');
@@ -57,20 +58,20 @@
       });
 
       if (result.error) {
-        error = result.error.message ?? 'An unknown error occurred';
-      } else if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
-        // Payment succeeded - now create transfers directly
-        const transfersResult = await createTransfers(
-          result.paymentIntent.id,
-          orderId, 
-          JSON.parse(decodeURIComponent(categoryTotals || '{}'))
-        );
-        
+        error = result.error.message ?? 'Payment failed';
+      } else if (result.paymentIntent?.status === 'succeeded') {
+        // Create transfers to category accounts
+        const transfersResult = await createTransfers({
+          paymentIntentId: result.paymentIntent.id,
+          orderId,
+          categoryTotals: JSON.parse(decodeURIComponent(categoryTotals || '{}'))
+        });
+
         if (transfersResult.success) {
           cartStore.clearCart();
           goto(`/checkout/success?order_id=${orderId}`);
         } else {
-          error = 'Payment processed but transfers failed. Our team will handle this manually.';
+          error = 'Payment processed but transfers failed';
           goto(`/checkout/success?order_id=${orderId}&transfer_error=true`);
         }
       }
@@ -79,25 +80,6 @@
       error = 'Payment failed. Please try again.';
     } finally {
       isProcessing = false;
-    }
-  }
-  
-  async function createTransfers(paymentIntentId: string, orderId: string, categoryTotals: Record<string, number>) {
-    try {
-      const response = await fetch('/api/payment/create-transfers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          paymentIntentId,
-          orderId,
-          categoryTotals
-        })
-      });
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Transfer creation failed:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'An unknown error occurred' };
     }
   }
 </script>

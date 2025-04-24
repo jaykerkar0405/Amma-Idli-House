@@ -1,35 +1,51 @@
-import type { CreateOrderInput } from '$lib/stores/cart.svelte';
-
-// Configure these values based on your categories
+// Configure your Stripe connected account IDs
 const CATEGORY_ACCOUNTS = {
-	food: 'acct_food123',
-	default: 'acct_default789',
-	beverage: 'acct_beverage456'
+	snack: 'acct_snack123', // Replace with your actual account ID
+	beverage: 'acct_beverage456', // Replace with your actual account ID
 };
 
-// Create a payment intent with Stripe
-export async function createPaymentIntent(orderInput: CreateOrderInput, orderId: string) {
-	try {
-		const response = await fetch('/api/payment/create-intent', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
-				orderId,
-				amount: orderInput.products.reduce((sum, item) => sum + item.price, 0),
-				categoryTotals: orderInput.categoryTotals || {}
-			})
-		});
+export async function createPaymentIntent(params: {
+	amount: number;
+	orderId: string;
+	categoryTotals: Record<string, number>;
+}) {
+	const response = await fetch('/api/payment/create-intent', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({
+			amount: params.amount,
+			orderId: params.orderId,
+			categoryTotals: params.categoryTotals
+		})
+	});
 
-		if (!response.ok) {
-			const errorData = await response.json();
-			throw new Error(errorData.error || 'Failed to create payment intent');
-		}
-
-		return await response.json();
-	} catch (error) {
-		console.error('Payment intent creation failed:', error);
-		throw error;
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.message || 'Payment intent creation failed');
 	}
+
+	return response.json();
+}
+
+export async function createTransfers(params: {
+	paymentIntentId: string;
+	orderId: string;
+	categoryTotals: Record<string, number>;
+}) {
+	const response = await fetch('/api/payment/create-transfers', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({
+			paymentIntentId: params.paymentIntentId,
+			orderId: params.orderId,
+			categoryTotals: params.categoryTotals
+		})
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.message || 'Transfer creation failed');
+	}
+
+	return response.json();
 }

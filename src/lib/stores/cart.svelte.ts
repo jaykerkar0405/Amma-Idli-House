@@ -148,7 +148,7 @@ export function createCartStore() {
 				return Array(item.quantity).fill({
 					name: `${item.name} (${item.size})`,
 					price: priceValue,
-					category: item.category || 'default'
+					category: item.category || 'snacks'
 				});
 			}),
 			status: 'PENDING',

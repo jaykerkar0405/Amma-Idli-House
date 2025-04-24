@@ -39,63 +39,55 @@
 			return;
 		}
 
-		// // Check if cart is empty
-		// if (cart.length === 0) {
-		// 	toast.error('Your cart is empty');
-		// 	return;
-		// }
+		// Check if cart is empty
+		if (cart.length === 0) {
+			toast.error('Your cart is empty');
+			return;
+		}
 
-		// try {
-		// 	isSubmitting = true;
-		// 	const orderInput = cartToOrderInput($page.data.user.id);
-		// 	const categoryTotals = getTotalsByCategory(); // Get totals by category
+		try {
+			isSubmitting = true;
+			const orderInput = cartToOrderInput($session.data.user.id);
+			const categoryTotals = cart.reduce<Record<string, number>>((totals, item) => {
+				const category = item.category || 'default';
+				totals[category] = (totals[category] || 0) + (Number(item.price) * item.quantity);
+				return totals;
+			}, {});
 
-		// 	// First create the order in your database
-		// 	const orderResponse = await fetch('/api/orders', {
-		// 		method: 'POST',
-		// 		headers: {
-		// 			'Content-Type': 'application/json'
-		// 		},
-		// 		body: JSON.stringify(orderInput)
-		// 	});
+			// First create the order in your database
+			const orderResponse = await fetch('/api/orders', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(orderInput)
+			});
 
-		// 	const orderResult = await orderResponse.json();
+			const orderResult = await orderResponse.json();
 
-		// 	if (!orderResponse.ok) {
-		// 		throw new Error(orderResult.error || 'Failed to place order');
-		// 	}
+			if (!orderResponse.ok) {
+				throw new Error(orderResult.error || 'Failed to place order');
+			}
 
-		// 	// Then create a payment intent with Stripe
-		// 	const paymentResponse = await fetch('/api/payment/create-intent', {
-		// 		method: 'POST',
-		// 		headers: {
-		// 			'Content-Type': 'application/json'
-		// 		},
-		// 		body: JSON.stringify({
-		// 			orderId: orderResult.id,
-		// 			amount: getCartTotal(),
-		// 			categoryTotals: categoryTotals
-		// 		})
-		// 	});
+			// Then create a payment intent with Stripe
+			const paymentIntent = await createPaymentIntent({
+				amount: getCartTotal(),
+				orderId: orderResult.order.id,
+				categoryTotals
+			});
 
-		// 	const paymentResult = await paymentResponse.json();
-
-		// 	if (!paymentResponse.ok) {
-		// 		throw new Error(paymentResult.error || 'Failed to process payment');
-		// 	}
-
-		// 	// Navigate to the payment page with all needed parameters
-		// 	goto(
-		// 		`/checkout/payment?client_secret=${paymentResult.clientSecret}&order_id=${orderResult.id}&category_totals=${encodeURIComponent(JSON.stringify(categoryTotals))}`
-		// 	);
-		// } catch (error) {
-		// 	console.error('Error placing order:', error);
-		// 	toast.error(
-		// 		error instanceof Error ? error.message : 'Failed to place order. Please try again.'
-		// 	);
-		// } finally {
-		// 	isSubmitting = false;
-		// }
+			// Navigate to the payment page with all needed parameters
+			goto(
+				`/checkout/payment?client_secret=${paymentIntent.clientSecret}&order_id=${orderResult.order.id}&category_totals=${encodeURIComponent(JSON.stringify(categoryTotals))}`
+			);
+		} catch (error) {
+			console.error('Error placing order:', error);
+			toast.error(
+				error instanceof Error ? error.message : 'Failed to place order. Please try again.'
+			);
+		} finally {
+			isSubmitting = false;
+		}
 	}
 </script>
 
