@@ -23,65 +23,50 @@
 		TableRow
 	} from '$lib/components/ui/table';
 	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
+	import { Dialog, DialogContent, DialogHeader, DialogTitle } from '$lib/components/ui/dialog';
 	import { cartStore } from '$lib/stores/cart.svelte';
 	import type { Prisma } from '@prisma/client';
 	import { Plus, ShoppingCart } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
+	// Define types
+	type Variant = {
+		size: string;
+		price: string;
+	};
+
+	type MenuItem = {
+		id: string;
+		name: string;
+		description: string;
+		variants: Variant[];
+		image: string;
+		category?: string;
+	};
+
+	type Product = {
+		id: string;
+		name: string;
+		price: number;
+		quantity?: number;
+	};
+
+	type Order = Prisma.OrderGetPayload<{ include: { products: true } }>;
+
 	// Extract methods from cart store
 	const { addToCart, getCartItemsCount } = cartStore;
 
-	// Check if URL has a tab parameter
-	let activeTab = $state($page.url.searchParams.get('tab') || 'orders');
-	let userOrders = $state<Prisma.OrderGetPayload<{ include: { products: true } }>[]>([]);
+	// State with proper types
+	let activeTab = $state<string>($page.url.searchParams.get('tab') || 'orders');
+	let userOrders = $state<Order[]>([]);
 	let isLoading = $state(false);
+	let selectedOrder = $state<Order | null>(null);
+	let showModal = $state(false);
 	let session = authClient.useSession();
 
-	// Update URL when tab changes
-	function handleTabChange(tab: string) {
-		const url = new URL(window.location.href);
-		url.searchParams.set('tab', tab);
-		pushState(url.toString(), {});
-		activeTab = tab;
-
-		// If switching to orders tab, fetch orders
-		if (tab === 'orders' || tab === 'history') {
-			fetchUserOrders();
-		}
-	}
-
-	// Fetch user orders from API
-	async function fetchUserOrders() {
-		if (!$session.data?.user) return;
-
-		isLoading = true;
-		try {
-			const response = await fetch(`/api/orders/user?userId=${$session.data.user.id}`);
-			const data = await response.json();
-
-			if (data.success) {
-				userOrders = data.orders;
-			} else {
-				toast.error('Failed to load orders');
-			}
-		} catch (error) {
-			console.error('Error fetching orders:', error);
-			toast.error('Failed to load orders');
-		} finally {
-			isLoading = false;
-		}
-	}
-
-	// Load orders on page load
-	onMount(() => {
-		if (activeTab === 'orders' || activeTab === 'history') {
-			fetchUserOrders();
-		}
-	});
-
-	// Menu items
-	const menuItems = [
+	// Menu items with proper typing
+	const menuItems: MenuItem[] = [
 		{
 			id: 'idli',
 			name: 'Idli',
@@ -117,10 +102,42 @@
 		}
 	];
 
-	// Selected variant for each menu item
 	const selectedVariants = $state<Record<string, string>>({});
 
-	function getStatusColor(status: string) {
+	function handleTabChange(tab: string): void {
+		const url = new URL(window.location.href);
+		url.searchParams.set('tab', tab);
+		pushState(url.toString(), {});
+		activeTab = tab;
+
+		// If switching to orders tab, fetch orders
+		if (tab === 'orders' || tab === 'history') {
+			fetchUserOrders();
+		}
+	}
+
+	async function fetchUserOrders(): Promise<void> {
+		if (!$session.data?.user) return;
+
+		isLoading = true;
+		try {
+			const response = await fetch(`/api/orders/user?userId=${$session.data.user.id}`);
+			const data = await response.json();
+
+			if (data.success) {
+				userOrders = data.orders;
+			} else {
+				toast.error('Failed to load orders');
+			}
+		} catch (error) {
+			console.error('Error fetching orders:', error);
+			toast.error('Failed to load orders');
+		} finally {
+			isLoading = false;
+		}
+	}
+
+	function getStatusColor(status: string): string {
 		switch (status) {
 			case 'preparing':
 			case 'PENDING':
@@ -135,7 +152,7 @@
 		}
 	}
 
-	function handleAddToCart(item: (typeof menuItems)[0]) {
+	function handleAddToCart(item: MenuItem): void {
 		const selectedSize = selectedVariants[item.id] || item.variants[0].size;
 		const selectedVariant = item.variants.find((v) => v.size === selectedSize);
 
@@ -150,11 +167,36 @@
 			size: selectedVariant.size,
 			price: selectedVariant.price,
 			quantity: 1,
-			imageUrl: item.image
+			imageUrl: item.image,
+			category: item.category || 'snacks'  
 		});
 
 		toast.success(`Added ${item.name} (${selectedVariant.size}) to cart`);
 	}
+
+	function groupProducts(products: Product[]): Record<string, Product & { quantity: number }> {
+		return products.reduce((acc, product) => {
+			const key = `${product.name}-${product.price}`;
+			if (!acc[key]) {
+				acc[key] = { ...product, quantity: 1 };
+			} else {
+				acc[key].quantity! += 1;
+			}
+			return acc;
+		}, {} as Record<string, Product & { quantity: number }>);
+	}
+
+	function handleViewDetails(order: Order): void {
+		selectedOrder = order;
+		showModal = true;
+	}
+
+	// Load orders on mount
+	onMount(() => {
+		if (activeTab === 'orders' || activeTab === 'history') {
+			fetchUserOrders();
+		}
+	});
 </script>
 
 <div class="container mx-auto space-y-6 p-4">
@@ -195,8 +237,10 @@
 							</CardHeader>
 							<CardContent>
 								<ul class="list-disc pl-5">
-									{#each order.products as product}
-										<li>{product.name} (₹{product.price})</li>
+									{#each Object.values(groupProducts(order.products)) as product}
+										<li>
+											{product.name} x{product.quantity} (₹{product.price * product.quantity})
+										</li>
 									{/each}
 								</ul>
 							</CardContent>
@@ -204,7 +248,9 @@
 								<span class="font-semibold">
 									Total: ₹{order.products.reduce((acc: number, curr) => acc + curr.price, 0)}
 								</span>
-								<Button variant="outline">View Details</Button>
+								<Button variant="outline" onclick={() => handleViewDetails(order)}>
+									View Details
+								</Button>
 							</CardFooter>
 						</Card>
 					{/each}
@@ -216,6 +262,48 @@
 					</CardContent>
 				</Card>
 			{/if}
+
+			<!-- Order Details Modal -->
+			<Dialog open={showModal} onOpenChange={(open) => (showModal = open)}>
+				{#if selectedOrder}
+					<DialogContent class="sm:max-w-[425px]">
+						<DialogHeader>
+							<DialogTitle>Order Details #{selectedOrder.id.slice(0, 8)}</DialogTitle>
+						</DialogHeader>
+						<div class="grid gap-4 py-4">
+							<div class="space-y-2">
+								<h4 class="font-medium">Order Information</h4>
+								<p class="text-sm text-muted-foreground">
+									Created: {new Date(selectedOrder.createdAt).toLocaleString()}
+								</p>
+								<p class="text-sm text-muted-foreground">
+									Status: <Badge variant="secondary">{selectedOrder.status}</Badge>
+								</p>
+							</div>
+							
+							<div class="space-y-2">
+								<h4 class="font-medium">Items</h4>
+								<div class="rounded-md border p-4">
+									{#each Object.values(groupProducts(selectedOrder.products)) as product}
+										<div class="flex justify-between py-1">
+											<span>{product.name} x{product.quantity}</span>
+											<span>₹{product.price * product.quantity}</span>
+										</div>
+										{#if product !== Object.values(groupProducts(selectedOrder.products)).slice(-1)[0]}
+											<Separator class="my-2" />
+										{/if}
+									{/each}
+									<Separator class="my-2" />
+									<div class="flex justify-between font-medium">
+										<span>Total</span>
+										<span>₹{selectedOrder.products.reduce((acc, curr) => acc + curr.price, 0)}</span>
+									</div>
+								</div>
+							</div>
+						</div>
+					</DialogContent>
+				{/if}
+			</Dialog>
 		</TabsContent>
 
 		<TabsContent value="history" class="mt-6">
