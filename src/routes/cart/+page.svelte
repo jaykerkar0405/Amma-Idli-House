@@ -14,9 +14,12 @@
 	let isSubmitting = $state(false);
 	let session = authClient.useSession();
 
+	// Make cart items reactive
+	let cartItems = $derived(cartStore.cart);
+	let cartTotal = $state(0);
+
 	// Extract methods from cart store
 	const {
-		cart,
 		removeFromCart,
 		updateQuantity,
 		clearCart,
@@ -25,10 +28,10 @@
 		cartToOrderInput
 	} = cartStore;
 
+	// Update effect to track cart changes
 	$effect(() => {
-		// Add an effect to calculate the total, which will rerun when cart changes
-		// This is mostly to ensure reactivity in the UI
-		getCartTotal();
+		cartTotal = getCartTotal();
+		cartItems = cartStore.cart; // Ensure UI updates when cart changes
 	});
 
 	async function handleCheckout() {
@@ -40,7 +43,7 @@
 		}
 
 		// Check if cart is empty
-		if (cart.length === 0) {
+		if (cartItems.length === 0) {
 			toast.error('Your cart is empty');
 			return;
 		}
@@ -48,7 +51,7 @@
 		try {
 			isSubmitting = true;
 			const orderInput = cartToOrderInput($session.data.user.id);
-			const categoryTotals = cart.reduce<Record<string, number>>((totals, item) => {
+			const categoryTotals = cartItems.reduce<Record<string, number>>((totals, item) => {
 				const category = item.category || 'default';
 				totals[category] = (totals[category] || 0) + (Number(item.price) * item.quantity);
 				return totals;
@@ -94,7 +97,7 @@
 <div class="container mx-auto px-4 py-8">
 	<h1 class="mb-6 text-3xl font-bold">Your Cart</h1>
 
-	{#if cart.length === 0}
+	{#if cartItems.length === 0}
 		<Card>
 			<CardContent class="flex flex-col items-center justify-center py-12">
 				<ShoppingCart class="mb-4 h-16 w-16 text-muted-foreground" />
@@ -107,7 +110,7 @@
 		<div class="grid gap-6 md:grid-cols-3">
 			<!-- Cart Items (Left 2/3) -->
 			<div class="space-y-4 md:col-span-2">
-				{#each cart as item (item.id + item.size)}
+				{#each cartItems as item (item.id + item.size)}
 					<Card>
 						<div class="flex p-4">
 							<div class="h-24 w-24 flex-shrink-0 overflow-hidden rounded-md border border-muted">
@@ -177,12 +180,12 @@
 						<div class="space-y-4">
 							<div class="flex justify-between">
 								<span>Subtotal</span>
-								<span>₹{getCartTotal().toFixed(2)}</span>
+								<span>₹{cartTotal.toFixed(2)}</span>
 							</div>
 							<Separator />
 							<div class="flex justify-between font-medium">
 								<span>Total</span>
-								<span>₹{getCartTotal().toFixed(2)}</span>
+								<span>₹{cartTotal.toFixed(2)}</span>
 							</div>
 						</div>
 					</CardContent>
@@ -190,7 +193,7 @@
 						<Button
 							class="w-full"
 							onclick={handleCheckout}
-							disabled={isSubmitting || cart.length === 0}
+							disabled={isSubmitting || cartItems.length === 0}
 						>
 							{isSubmitting ? 'Processing...' : 'Place Order'}
 						</Button>
