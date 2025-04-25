@@ -1,9 +1,3 @@
-// Configure your Stripe connected account IDs
-const CATEGORY_ACCOUNTS = {
-	snack: 'acct_snack123', // Replace with your actual account ID
-	beverage: 'acct_beverage456', // Replace with your actual account ID
-};
-
 export async function createPaymentIntent(params: {
 	amount: number;
 	orderId: string;

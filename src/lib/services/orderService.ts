@@ -48,6 +48,25 @@ export async function getUserOrders(userId: string) {
 }
 
 /**
+ * Gets all orders with user information
+ */
+export async function getAllOrders() {
+  return await prisma.order.findMany({
+    include: { 
+      products: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        }
+      }
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+}
+
+/**
  * Updates the status of an order
  */
 export async function updateOrderStatus(orderId: string, status: 'PENDING' | 'COMPLETED' | 'CANCELLED') {
